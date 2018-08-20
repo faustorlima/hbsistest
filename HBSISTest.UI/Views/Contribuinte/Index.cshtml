@@ -1,0 +1,204 @@
+﻿@{
+    ViewBag.Title = "Index";
+}
+
+<div class="container">
+    <div class="row">
+        <div class="col-sm-4" ng-app="myapp" ng-controller="postController">
+            <div class="page-header"><h3>Cadastro de Contribuinte</h3></div>
+            <!-- FORM -->
+            <form name="userForm" ng-submit="submitForm()">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" name="Nome" class="form-control" ng-model="contribuinte.Nome">
+                    <span ng-show="errorNome" class="text-danger">{{errorNome}}</span>
+                </div>
+                <div class="form-group">
+                    <label>CPF</label>
+                    <input type="text" placeholder="CPF" maxlength="11" name="Cpf" [brmasker]="{mask:'00000000000', len:11}" class="form-control" ng-model="contribuinte.Cpf">
+                    <span ng-show="errorCpf" class="text-danger">{{errorCpf}}</span>
+                </div>
+                <div class="form-group">
+                    <label>Número de Dependentes</label>
+                    <input type="text" numbers-only name="NumeroDependentes" maxLength="2" class="form-control" ng-model="contribuinte.NumeroDependentes" style="width: 50px;" />
+                    <span ng-show="errorNumeroDependentes" class="text-danger">{{errorNumeroDependentes}}</span>
+                </div>
+                <div class="form-group">
+                    <label>Renda Bruta Mensal</label>
+                    <input type="text" numbers-only name="RendaBrutaMensal" class="form-control" ng-model="contribuinte.RendaBrutaMensal">
+                    <span ng-show="errorRendaBrutaMensal" class="text-danger">{{errorRendaBrutaMensal}}</span>
+                </div>
+                <button type="submit" class="btn btn-primary">Cadastrar</button>
+                <br /><br />
+            </form>
+        </div>
+        <div class="col-sm-3" ng-app="myapp" ng-controller="salarioMinimoController">
+            <div class="page-header"><h3>Cadastro de Salário Mínimo</h3></div>
+            <!-- FORM -->
+            <form name="userForm" ng-submit="submitForm()">
+                <div class="form-group">
+                    <label>Salário Mínimo</label>
+                    <input type="text" numbers-only name="Salario" class="form-control" ng-model="salarioMinimo.Salario" />
+                    <span ng-show="errorSalario">{{errorSalario}}</span>
+                </div>
+                <button type="submit" class="btn btn-primary">Alterar</button>
+                <br /><br />
+            </form>
+        </div>
+        <div class="col-sm-5">
+            <div class="page-header"><h3>Tabela de Cálculo de IR</h3></div>
+            <div class="col-sm-12" ng-app="myapp" ng-controller="irController">
+                <table class="table table-striped table-bordered">
+                    <tr>
+                        <th>De</th>
+                        <th>Até</th>
+                        <th>Alíquota</th>
+                    </tr>
+                    <tr ng-repeat="aliquotair in result">
+                        <td>{{aliquotair.DeSalariosMinimos}}</td>
+                        <td>{{aliquotair.AteSalariosMinimos}}</td>
+                        <td>{{aliquotair.Aliquota}}</td>
+                    </tr>
+
+
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-sm-12" ng-app="myapp" ng-controller="contribuinteController">
+            <table class="table table-striped table-bordered">
+                <tr>
+                    <th>Nome</th>
+                    <th>CPF</th>
+                    <th>Número de Dependentes</th>
+                    <th>Renda Bruta Mensal</th>
+                    <th>Imposto de Renda</th>
+                </tr>
+                <tr ng-repeat="contribuinte in result">
+                    <td>{{contribuinte.Nome}}</td>
+                    <td>{{contribuinte.Cpf}}</td>
+                    <td>{{contribuinte.NumeroDependentes}}</td>
+                    <td>{{contribuinte.RendaBrutaMensal}}</td>
+                    <td>{{contribuinte.ImpostoRenda}}</td>
+                </tr>
+
+
+            </table>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+
+    var myapp = angular.module('myapp', []);
+
+    myapp.directive('numbersOnly', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, element, attr, ngModelCtrl) {
+                function fromUser(text) {
+                    if (text) {
+                        var transformedInput = text.replace(/[^0-9]/g, '');
+
+                        if (transformedInput !== text) {
+                            ngModelCtrl.$setViewValue(transformedInput);
+                            ngModelCtrl.$render();
+                        }
+                        return transformedInput;
+                    }
+                    return undefined;
+                }            
+                ngModelCtrl.$parsers.push(fromUser);
+            }
+        };
+    });
+    
+    myapp.controller('contribuinteController', function ($scope, $http) {
+        $http.get('http://localhost:54140/api/contribuinte').then(function(response) {
+            $scope.result = response.data;
+        });
+    });
+
+    myapp.controller('postController', function ($scope, $http) {
+        console.log($scope);
+        $scope.contribuinte = {};
+        $scope.submitForm = function () {
+            $http({
+                method: 'POST',
+                url: 'http://localhost:54140/api/contribuinte',
+                data: $scope.contribuinte,
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then(function (data) {
+                    location.reload();
+
+                })
+                .catch((error) => {
+
+                    if (error.status == 400) {
+
+                        var modelState = error.data.ModelState;
+
+                        console.log(modelState);
+
+                        if (modelState["contribuinte.Nome"])
+                            $scope.errorNome = modelState["contribuinte.Nome"][0];
+
+                        if (modelState["contribuinte.Cpf"])
+                            $scope.errorCpf = modelState["contribuinte.Cpf"][0];
+
+                        if (modelState["contribuinte.NumeroDependentes"])
+                            $scope.errorNumeroDependentes = modelState["contribuinte.NumeroDependentes"][0];
+
+                        if (modelState["contribuinte.RendaBrutaMensal"])
+                            $scope.errorRendaBrutaMensal = modelState["contribuinte.RendaBrutaMensal"][0];
+
+                    }
+                });
+        };
+    });
+
+    myapp.controller('salarioMinimoController', function ($scope, $http) {
+        $http.get('http://localhost:54140/api/salarioMinimo/1').then(function (response) {
+            $scope.salarioMinimo = response.data;
+            console.log('scope:' + $scope.salarioMinimo );
+        });
+
+        $scope.submitForm = function () {
+            $scope.salarioMinimo.salarioMinimoId = 1;
+            console.log($scope.salarioMinimo);
+            $http({
+                    method: 'PUT',
+                    url: 'http://localhost:54140/api/salarioMinimo',
+                    data: $scope.salarioMinimo,
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(function (data) {
+                    location.reload();
+                })
+                .catch((error) => {
+
+                    console.log($scope);
+                    if (error.status == 400) {
+
+                        var modelState = error.data.ModelState;
+
+                        console.log(modelState);
+
+                        if (modelState["salarioMinimo.Salario"])
+                            $scope.errorSalario = modelState["salarioMinimo.Salario"][0];
+
+                    }
+                });
+        };
+    });
+
+    myapp.controller('irController', function ($scope, $http) {
+        $http.get('http://localhost:54140/api/aliquotair').then(function (response) {
+            $scope.result = response.data;
+            console.log(response);
+        });
+    });
+
+</script>
